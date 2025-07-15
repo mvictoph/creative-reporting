@@ -94,7 +94,7 @@ def create_ppt_from_data(df, images_dict):
     # Titre - Position ajustée encore plus haut
     title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
-    title_frame.text = "Creative Reporting"
+    title_frame.text =  = "Creative Reporting"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
@@ -126,40 +126,40 @@ def create_ppt_from_data(df, images_dict):
                 img.save(img_byte_arr, format=img.format if img.format else 'JPEG')
                 img_byte_arr.seek(0)
                 
-                slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=imaimage_height)
+                slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
             
-            # Ajout des informations textuelles
-            text_top = top + image_height + Inches(0.1)
-            
-            # Texte Creative simplifié
-            name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
-            name_frame = name_box.text_frame
-            p = name_frame.paragraphs[0]
-            p.text = f"Creative: {variant}"
-            p.font.size = Pt(9)
-            p.font.bold = True
-            apply_amazon_style(name_frame)
-            
-            # Métriques
-            total_clicks, total_impressions, ctr = calculate_metrics(df, variant)
-            metrics_box = slide.shapes.add_textbox(left, text_top + Inches(0.25), image_width, Inches(0.6))
-            metrics_frame = metrics_box.text_frame
-            
-            metrics = [
-                f"Click-throughs: {total_clicks:,}",
-                f"Impressions: {total_impressions:,}",
-                f"CTR: {ctr:.2%}"
-            ]
-            
-            for idx, metric in enumerate(metrics):
-                if idx == 0:
-                    p = metrics_frame.paragraphs[0]
-                else:
-                    p = metrics_frame.add_paragraph()
-                p.text = metric
+                # Ajout des informations textuelles
+                text_top = top + image_height + Inches(0.1)
+                
+                # Texte Creative simplifié
+                name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
+                name_frame = name_box.text_frame
+                p = name_frame.paragraphs[0]
+                p.text = f"Creative: {variant}"
                 p.font.size = Pt(9)
-            
-            apply_amazon_style(metrics_frame)
+                p.font.bold = True
+                apply_amazon_style(name_frame)
+                
+                # Métriques
+                total_clicks, total_impressions, ctr = calculate_metrics(df, variant)
+                metrics_box = slide.shapes.add_textbox(left, text_top + Inches(0.25), image_width, Inches(0.6))
+                metrics_frame = metrics_box.text_frame
+                
+                metrics = [
+                    f"Click-throughs: {total_clicks:,}",
+                    f"Impressions: {total_impressions:,}",
+                    f"CTR: {ctr:.2%}"
+                ]
+                
+                for idx, metric in enumerate(metrics):
+                    if idx == 0:
+                        p = metrics_frame.paragraphs[0]
+                    else:
+                        p = metrics_frame.add_paragraph()
+                    p.text = metric
+                    p.font.size = Pt(9)
+                
+                apply_amazon_style(metrics_frame)
             
         except Exception as e:
             st.error(f"Error with variant {variant}: {str(e)}")

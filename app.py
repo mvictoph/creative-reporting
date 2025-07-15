@@ -194,6 +194,19 @@ def main():
     st.title("Creative Reporting Generator")
     st.markdown("---")
     
+    # Nouvelle section pour le nom du rapport
+    report_name = st.text_input(
+        "Creative Reporting Name",
+        placeholder="e.g., Creative_Reporting_Q1_2024",
+        help="Choose a name for your report (optional)",
+        key="report_name"
+    )
+    
+    # Si aucun nom n'est fourni, utiliser le nom par défaut
+    final_report_name = report_name if report_name else "Creative_Reporting"
+    
+    st.markdown("---")
+    
     col1, col2 = st.columns(2)
     
     with col1:
@@ -226,7 +239,7 @@ def main():
                         st.download_button(
                             label="📥 Download PowerPoint Report",
                             data=pptx_buffer,
-                            file_name="Creative_Reporting.pptx",
+                            file_name=f"{final_report_name}.pptx",
                             mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
                         )
 
@@ -244,21 +257,14 @@ def main():
                                 pptx_buffer = create_ppt_from_data(df, images_dict)
                                 success, message = send_report_to_slack(
                                     pptx_buffer,
-                                    f"Creative_Reporting_{user_login}.pptx",
-                                    user_login  # Ajout du login ici
+                                    f"{final_report_name}_{user_login}.pptx",
+                                    user_login
                                 )
                                 
                                 if success:
                                     st.success(message)
                                 else:
                                     st.error(message)
-                                
-                                st.download_button(
-                                    label="📥 Also Download PowerPoint",
-                                    data=pptx_buffer,
-                                    file_name=f"Creative_Reporting_{user_login}.pptx",
-                                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                                )
                 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")

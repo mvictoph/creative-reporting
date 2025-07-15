@@ -94,14 +94,14 @@ def create_ppt_from_data(df, images_dict):
     # Titre - Position ajustée encore plus haut
     title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
-    title_frame.text = "Creative Reporting"  # Correction ici
+    title_frame.text = "Creative Reporting"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
-    # Configuration de la grille
+    # Configuration de la grille avec plus d'espace après le titre
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(0.7)
+    top_margin = Inches(1.0)  # Augmenté de 0.7 à 1.0 pour plus d'espace après le titre
     max_image_width = pixels_to_inches(220)
     max_image_height = pixels_to_inches(180)
     spacing_x = max_image_width + Inches(2)

@@ -71,8 +71,8 @@ def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6
             similarity = 0.8
         else:
             variant_words = set(clean_variant.split())
-            img_words = set(clean_img_name.split())
-            common_words = variant_words.intersection(img_words)
+            img_words = set(clean_imgimg_name.split())
+            common_words = variant_words.intersectiction(img_words)
             
             if common_words:
                 similarity = len(common_words) / max(len(variant_words), len(img_words))
@@ -98,16 +98,15 @@ def create_ppt_from_data(df, images_dict):
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
-    # Configuration de la grille
+    # Configuration de la grille avec espacement réduit
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(1.5)
+    top_margin = Inches(1)  # Réduit de 1.5 à 1 inch
     max_image_width = pixels_to_inches(220)
     max_image_height = pixels_to_inches(180)
     spacing_x = max_image_width + Inches(2)
     spacing_y = max_image_height + Inches(1.3)
     
-    # Création des slides pour chaque variant
     for index, variant in enumerate(df['Variant'].unique()):
         row_num = index // items_per_row
         col_num = index % items_per_row
@@ -132,13 +131,14 @@ def create_ppt_from_data(df, images_dict):
             # Ajout des informations textuelles
             text_top = top + image_height + Inches(0.1)
             
-            # Creative UID
-            creative_uid = df[df['Variant'] == variant]['Creative ID'].iloc[0] if 'Creative ID' in df.columns else "N/A"
-            uid_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
-            uid_frame = uid_box.text_frame
-            uid_frame.text = f"Creative UID: {creative_uid}"
-            uid_frame.paragraphs[0].font.size = Pt(9)
-            apply_amazon_style(uid_frame)
+            # Creative Name en gras
+            name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
+            name_frame = name_box.text_frame
+            p = name_frame.paragraphs[0]
+            p.text = f"Creative Name: {variant}"
+            p.font.size = Pt(9)
+            p.font.bold = True  # Mise en gras
+            apply_amazon_style(name_frame)
             
             # Métriques
             total_clicks, total_impressions, ctr = calculate_metrics(df, variant)
@@ -164,7 +164,6 @@ def create_ppt_from_data(df, images_dict):
         except Exception as e:
             st.error(f"Error with variant {variant}: {str(e)}")
     
-    # Sauvegarde de la présentation
     pptx_buffer = io.BytesIO()
     prs.save(pptx_buffer)
     pptx_buffer.seek(0)

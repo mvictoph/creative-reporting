@@ -9,23 +9,20 @@ from PIL import Image
 import warnings
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from dotenv import load_dotenv
 
 # Ignorer les avertissements OpenPyXL
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
 # Configuration de la page
-st.set_page_config(
-    page_title="Amazon Creative Reporting",
-    page_icon="📊",
-    layout="wide"
-)
+st.set_page_config(page_title="Amazon Creative Reporting", page_icon="📊", layout="wide")
 
-# Configuration Slack
-load_dotenv()
-SLACK_TOKEN = os.getenv('SLACK_TOKEN')
-SLACK_CHANNEL = os.getenv('SLACK_CHANNEL')
-slack_client = WebClient(token=SLACK_TOKEN) if SLACK_TOKEN else None
+# Initialisation du client Slack
+slack_token = os.environ.get('SLACK_TOKEN')
+if slack_token:
+    client = WebClient(token=slack_token)
+else:
+    st.warning("Slack token not found. Slack integration will not work.")
+    client = None
 
 def pixels_to_inches(pixels):
     return Inches(pixels / 96)
@@ -91,17 +88,17 @@ def create_ppt_from_data(df, images_dict):
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
     
-    # Titre - Position ajustée encore plus haut
+    # Titre - Position ajustée
     title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
     title_frame.text = "Creative Reporting"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
-    # Configuration de la grille avec plus d'espace après le titre
+    # Configuration de la grille
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(1.0)  # Augmenté de 0.7 à 1.0 pour plus d'espace après le titre
+    top_margin = Inches(0.7)
     max_image_width = pixels_to_inches(220)
     max_image_height = pixels_to_inches(180)
     spacing_x = max_image_width + Inches(2)
@@ -128,38 +125,38 @@ def create_ppt_from_data(df, images_dict):
                 
                 slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
             
-                # Ajout des informations textuelles
-                text_top = top + image_height + Inches(0.1)
-                
-                # Texte Creative simplifié
-                name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
-                name_frame = name_box.text_frame
-                p = name_frame.paragraphs[0]
-                p.text = f"Creative: {variant}"
+            # Ajout des informations textuelles
+            text_top = top + image_height + Inches(0.1)
+            
+            # Texte Creative simplifié
+            name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
+            name_frame = name_box.text_frame
+            p = name_frame.paragraphs[0]
+            p.text = f"Creative: {variant}"
+            p.font.size = Pt(9)
+            p.font.bold = True
+            apply_amazon_style(name_frame)
+            
+            # Métriques
+            total_clicks, total_impressions, ctr = calculate_metrics(df, variant)
+            metrics_box = slide.shapes.add_textbox(left, text_top + Inches(0.25), image_width, Inches(0.6))
+            metrics_frame = metrics_box.text_frame
+            
+            metrics = [
+                f"Click-throughs: {total_clicks:,}",
+                f"Impressions: {total_impressions:,}",
+                f"CTR: {ctr:.2%}"
+            ]
+            
+            for idx, metric in enumerate(metrics):
+                if idx == 0:
+                    p = metrics_frame.paragraphs[0]
+                else:
+                    p = metrics_frame.add_paragraph()
+                p.text = metric
                 p.font.size = Pt(9)
-                p.font.bold = True
-                apply_amazon_style(name_frame)
-                
-                # Métriques
-                total_clicks, total_impressions, ctr = calculate_metrics(df, variant)
-                metrics_box = slide.shapes.add_textbox(left, text_top + Inches(0.25), image_width, Inches(0.6))
-                metrics_frame = metrics_box.text_frame
-                
-                metrics = [
-                    f"Click-throughs: {total_clicks:,}",
-                    f"Impressions: {total_impressions:,}",
-                    f"CTR: {ctr:.2%}"
-                ]
-                
-                for idx, metric in enumerate(metrics):
-                    if idx == 0:
-                        p = metrics_frame.paragraphs[0]
-                    else:
-                        p = metrics_frame.add_paragraph()
-                    p.text = metric
-                    p.font.size = Pt(9)
-                
-                apply_amazon_style(metrics_frame)
+            
+            apply_amazon_style(metrics_frame)
             
         except Exception as e:
             st.error(f"Error with variant {variant}: {str(e)}")
@@ -170,6 +167,9 @@ def create_ppt_from_data(df, images_dict):
     return pptx_buffer
 
 def send_report_to_slack(file_buffer, filename):
+    if not client:
+        return False, "Slack client not initialized. Check your SLACK_TOKEN."
+    
     try:
         response = client.files_upload_v2(
             channels="C095U79QZDL",  # ID exact de votre canal
@@ -185,7 +185,6 @@ def main():
     st.title("Creative Reporting Generator")
     st.markdown("---")
     
-    # Upload des fichiers
     col1, col2 = st.columns(2)
     
     with col1:
@@ -200,7 +199,6 @@ def main():
         if image_files:
             st.success(f"✅ {len(image_files)} images loaded")
 
-    # Traitement des fichiers
     if excel_file and image_files:
         try:
             df = pd.read_excel(excel_file)
@@ -208,7 +206,6 @@ def main():
             
             st.write(f"Number of variants detected: {len(df['Variant'].unique())}")
             
-            # Options de génération
             col1, col2 = st.columns(2)
             
             with col1:
@@ -258,3 +255,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

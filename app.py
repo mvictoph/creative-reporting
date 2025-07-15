@@ -166,36 +166,29 @@ def create_ppt_from_data(df, images_dict):
     pptx_buffer.seek(0)
     return pptx_buffer
 
-def send_report_to_slack(file_buffer, filename):
+def send_report_to_slack(file_buffer, filename, user_login):
     if not client:
         return False, "Slack client not initialized. Check your SLACK_TOKEN."
     
     try:
-        # Test channel visibility first
-        channel_id = "C095U79QZDL"
-        
-        # Try to get channel info first
-        try:
-            channel_info = client.conversations_info(channel=channel_id)
-            st.write(f"Channel info: {channel_info}")  # Debug info
-        except SlackApiError as e:
-            st.write(f"Error getting channel info: {e}")  # Debug info
-        
-        # Upload file
+        # Personnaliser le message avec le login de l'utilisateur
+        message = f"Here's the latest report from {user_login}!"
+
+        # Upload file directly to channel
         response = client.files_upload_v2(
-            channel=channel_id,  # Changed from channels to channel
+            channel="C095U79QZDL",
             file=file_buffer,
             filename=filename,
-            initial_comment="Here's the latest report!"
+            initial_comment=message
         )
         
-        st.write(f"Upload response: {response}")  # Debug info
-        return True, "Report successfully sent to Slack!"
-    
+        if response['ok']:
+            return True, f"Report successfully sent to Slack for {user_login}!"
+        else:
+            return False, f"Error in Slack response: {response}"
+            
     except SlackApiError as e:
-        error_detail = str(e)
-        st.write(f"Full error: {error_detail}")  # Debug info
-        return False, f"Error sending to Slack: {error_detail}"
+        return False, f"Error sending to Slack: {str(e)}"
 
 def main():
     st.title("Creative Reporting Generator")
@@ -251,7 +244,8 @@ def main():
                                 pptx_buffer = create_ppt_from_data(df, images_dict)
                                 success, message = send_report_to_slack(
                                     pptx_buffer,
-                                    f"Creative_Reporting_{user_login}.pptx"
+                                    f"Creative_Reporting_{user_login}.pptx",
+                                    user_login  # Ajout du login ici
                                 )
                                 
                                 if success:
@@ -271,4 +265,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

@@ -75,7 +75,7 @@ def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6
             common_words = variant_words.intersection(img_words)
             
             if common_words:
-                similarity = len(common_words) / max(len(variant_words), len(im(img_words))
+                similarity = len(common_words) / max(len(variant_words), len(img_words))
             else:
                 common_chars = set(clean_img_name) & set(clean_variant)
                 similarity = len(common_chars) / len(set(clean_img_name + clean_variant))

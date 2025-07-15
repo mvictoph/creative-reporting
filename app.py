@@ -170,14 +170,12 @@ def create_ppt_from_data(df, images_dict):
     return pptx_buffer
 
 def send_report_to_slack(file_buffer, filename):
-    if not slack_client:
-        return False, "Slack integration not configured"
     try:
-        response = slack_client.files_upload_v2(
-            channels=SLACK_CHANNEL,
+        response = client.files_upload_v2(
+            channels="C095U79QZDL",  # ID exact de votre canal
             file=file_buffer,
             filename=filename,
-            initial_comment="Here's the latest creative report!"
+            initial_comment="Here's the latest report!"
         )
         return True, "Report successfully sent to Slack!"
     except SlackApiError as e:

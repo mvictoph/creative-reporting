@@ -98,7 +98,7 @@ def create_ppt_from_data(df, images_dict):
     # Configuration de la grille
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(0.7)
+    top_margin = Inches(1.0)  # Augmenté pour plus d'espace sous le titre
     max_image_width = pixels_to_inches(220)
     max_image_height = pixels_to_inches(180)
     spacing_x = max_image_width + Inches(2)
@@ -257,7 +257,7 @@ def main():
                                 pptx_buffer = create_ppt_from_data(df, images_dict)
                                 success, message = send_report_to_slack(
                                     pptx_buffer,
-                                    f"{final_report_name}_{user_login}.pptx",
+                                    f"{final_report_name}.pptx",  # Suppression de _{user_login}
                                     user_login
                                 )
                                 

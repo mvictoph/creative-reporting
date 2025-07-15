@@ -91,17 +91,17 @@ def create_ppt_from_data(df, images_dict):
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
     
-    # Titre
-    title_box = slide.shapes.add_textbox(Inches(1), Inches(0.5), Inches(8), Inches(0.5))
+    # Titre - Position ajustée encore plus haut
+    title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
     title_frame.text = "Creative Reporting"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
-    # Configuration de la grille avec espacement réduit
+    # Configuration de la grille
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(1)  # Réduit de 1.5 à 1 inch
+    top_margin = Inches(0.7)
     max_image_width = pixels_to_inches(220)
     max_image_height = pixels_to_inches(180)
     spacing_x = max_image_width + Inches(2)
@@ -126,18 +126,18 @@ def create_ppt_from_data(df, images_dict):
                 img.save(img_byte_arr, format=img.format if img.format else 'JPEG')
                 img_byte_arr.seek(0)
                 
-                slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
+                slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=imaimage_height)
             
             # Ajout des informations textuelles
             text_top = top + image_height + Inches(0.1)
             
-            # Creative Name en gras
+            # Texte Creative simplifié
             name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
             name_frame = name_box.text_frame
             p = name_frame.paragraphs[0]
-            p.text = f"Creative Name: {variant}"
+            p.text = f"Creative: {variant}"
             p.font.size = Pt(9)
-            p.font.bold = True  # Mise en gras
+            p.font.bold = True
             apply_amazon_style(name_frame)
             
             # Métriques

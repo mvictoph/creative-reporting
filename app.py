@@ -94,7 +94,7 @@ def create_ppt_from_data(df, images_dict):
     # Titre - Position ajustée encore plus haut
     title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
-    title_frame.text =  = "Creative Reporting"
+    title_frame.text = "Creative Reporting"  # Correction ici
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     

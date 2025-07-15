@@ -171,15 +171,31 @@ def send_report_to_slack(file_buffer, filename):
         return False, "Slack client not initialized. Check your SLACK_TOKEN."
     
     try:
+        # Test channel visibility first
+        channel_id = "C095U79QZDL"
+        
+        # Try to get channel info first
+        try:
+            channel_info = client.conversations_info(channel=channel_id)
+            st.write(f"Channel info: {channel_info}")  # Debug info
+        except SlackApiError as e:
+            st.write(f"Error getting channel info: {e}")  # Debug info
+        
+        # Upload file
         response = client.files_upload_v2(
-            channels="C095U79QZDL",  # ID exact de votre canal
+            channel=channel_id,  # Changed from channels to channel
             file=file_buffer,
             filename=filename,
             initial_comment="Here's the latest report!"
         )
+        
+        st.write(f"Upload response: {response}")  # Debug info
         return True, "Report successfully sent to Slack!"
+    
     except SlackApiError as e:
-        return False, f"Error sending to Slack: {str(e)}"
+        error_detail = str(e)
+        st.write(f"Full error: {error_detail}")  # Debug info
+        return False, f"Error sending to Slack: {error_detail}"
 
 def main():
     st.title("Creative Reporting Generator")

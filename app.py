@@ -281,7 +281,7 @@ def main():
 
     # Nouvelle section pour le nom du rapport
     report_name = st.text_input(
-        "Creative Re Reporting Name",
+        "Creative Reporting Name",
         placeholder="e.g. Google_Creative_Report_Q1_2024",
         help="Choose a name for your report",
         key="report_name"

@@ -143,7 +143,7 @@ def create_ppt_from_data(df, images_dict, report_type):
     else:  # VCR Report
         title_top = Inches(0.5)  # Titre plus bas
         top_margin = Inches(1.5)  # Commencer les images plus bas
-        spacing_y = Inches(2.2)  # Espacement vertical réduit pour VCR
+        spacing_y = Inches(3.5)  # Espacement vertical augmenté pour VCR
     
     # Titre du rapport
     title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))
@@ -180,7 +180,7 @@ def create_ppt_from_data(df, images_dict, report_type):
                 img_byte_arr.seek(0)
                 
                 if report_type == "VCR Report":
-                    # Ajouter une bordure noire pour les images VCR
+                    # Bordure noire simple sans ombre
                     border = slide.shapes.add_shape(
                         MSO_SHAPE.RECTANGLE, 
                         left, 
@@ -189,8 +189,9 @@ def create_ppt_from_data(df, images_dict, report_type):
                         image_height
                     )
                     border.line.color.rgb = RGBColor(0, 0, 0)
-                    border.line.width = Pt(2)
-                    border.fill.background()
+                    border.line.width = Pt(1.5)  # Épaisseur de la bordure
+                    border.fill.background()  # Rend le rectangle transparent
+                    border.shadow.inherit = False  # Désactive l'ombre
                 
                 slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
             

@@ -224,13 +224,14 @@ def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
                 p.text = rate_text
                 
                 # Ajoute le pourcentage d'évolution en couleur
-                evolution_number = f" ({'+' if evolution >= 0 else ''}{evolution:.1f}%"
-                run_evolution = p.add_run(evolution_number)
+                run_evolution = p.add_run()
+                run_evolution.text = f" ({'+' if evolution >= 0 else ''}{evolution:.1f}%"
                 run_evolution.font.size = Pt(9)
                 run_evolution.font.color.rgb = RGBColor(0, 128, 0) if evolution >= 0 else RGBColor(255, 0, 0)
                 
                 # Ajoute "vs benchmark" en couleur par défaut
-                run_benchmark = p.add_run(" vs benchmark)")
+                run_benchmark = p.add_run()
+                run_benchmark.text = " vs benchmark)"
                 run_benchmark.font.size = Pt(9)
             else:
                 p.text = rate_text
@@ -347,7 +348,7 @@ def main():
             
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
-                    with st.spinner('Generating report...'):
+                    with st.spinninner('Generating report...'):
                         benchmark_value = benchmark if benchmark > 0 else None
                         pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                         st.success("Report generated successfully!")

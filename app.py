@@ -286,9 +286,9 @@ def main():
         min_value=0.0,
         max_value=100.0,
         value=0.0,
-        format="%.2f",
-        help="Enter the benchmark percentage as a number (e.g. enter 0.12 for 0.12%, do not include the % symbol)"
+        format="%.2f"
     )
+    st.caption("Enter the benchmark percentage as a number (e.g. enter 0.12 for 0.12%, do not include the % symbol)")
 
     report_name = st.text_input(
         "Creative Reporting Name",

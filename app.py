@@ -14,17 +14,13 @@ import cv2
 import tempfile
 import numpy as np
 
-# Ignorer les avertissements OpenPyXL
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
-# Configuration de la page
 st.set_page_config(page_title="Amazon Creative Reporting", page_icon="📊", layout="wide")
 
-# Définir les colonnes requises pour chaque type de rapport
 CTR_REQUIRED_COLUMNS = ['Variant', 'Click-throughs', 'Impressions']
 VCR_REQUIRED_COLUMNS = ['Variant', 'Video start', 'Video complete']
 
-# Initialisation du client Slack
 slack_token = os.environ.get('SLACK_TOKEN')
 if slack_token:
     client = WebClient(token=slack_token)
@@ -79,7 +75,7 @@ def calculate_metrics(df, variant, report_type, benchmark=None):
         total_clicks = variant_data['Click-throughs'].sum()
         total_impressions = variant_data['Impressions'].sum()
         rate = total_clicks / total_impressions if total_impressions > 0 else 0
-    else:  # VCR Report
+    else:
         video_starts = variant_data['Video start'].sum()
         video_completes = variant_data['Video complete'].sum()
         rate = video_completes / video_starts if video_starts > 0 else 0
@@ -176,13 +172,16 @@ def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
                         image_width, 
                         image_height
                     )
+                    border.fill.background()
                     border.line.color.rgb = RGBColor(0, 0, 0)
                     border.line.width = Pt(1.5)
-                    border.fill.background()
+                    border.line.dash_style = None
                     border.shadow.inherit = False
+                    border.line.compound_type = None
+                    border.line.join_type = None
                 
                 slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
-            
+
             text_top = top + image_height + Inches(0.1)
             
             name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
@@ -216,22 +215,18 @@ def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
                 p.text = metric
                 p.font.size = Pt(9)
             
-            # Ajout du CTR/VCR avec benchmark sur la même ligne
             p = metrics_frame.add_paragraph()
             rate_text = f"{'CTR' if report_type == 'CTR Report' else 'VCR'}: {rate:.2%}"
             if evolution is not None:
-                # Ajoute d'abord le taux (CTR ou VCR)
                 run_rate = p.add_run()
                 run_rate.text = rate_text
                 run_rate.font.size = Pt(9)
 
-                # Ajoute le pourcentage d'évolution en couleur
                 run_evolution = p.add_run()
                 run_evolution.text = f" ({'+' if evolution >= 0 else ''}{evolution:.1f}%"
                 run_evolution.font.size = Pt(9)
                 run_evolution.font.color.rgb = RGBColor(0, 128, 0) if evolution >= 0 else RGBColor(255, 0, 0)
 
-                # Ajoute "vs benchmark" en couleur par défaut
                 run_benchmark = p.add_run()
                 run_benchmark.text = " vs benchmark)"
                 run_benchmark.font.size = Pt(9)
@@ -327,7 +322,7 @@ def main():
                         file.name: Image.open(file) 
                         for file in creative_files
                     }
-                else:  # VCR Report
+                else:
                     images_dict = {
                         file.name.replace('.mp4', '.jpg'): extract_frame_from_video(file)
                         for file in creative_files

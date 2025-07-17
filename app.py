@@ -63,7 +63,7 @@ def extract_frame_from_video(video_file, time_in_seconds=3):
         # Ouvrir la vidéo
         cap = cv2.VideoCapture(video_path)
         
-        # Aller à la frame souhaitée (2 secondes)
+        # Aller à la frame souhaitée (3 secondes)
         cap.set(cv2.CAP_PROP_POS_MSEC, time_in_seconds * 1000)
         
         # Lire la frame
@@ -130,7 +130,7 @@ def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6
     
     return (best_match, highest_similarity) if highest_similarity >= similarity_threshold else (None, 0)
 
-def create_ppt_pt_from_data(df, images_dict, report_type):
+def create_ppt_from_data(df, images_dict, report_type):
     prs = Presentation()
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
@@ -139,13 +139,13 @@ def create_ppt_pt_from_data(df, images_dict, report_type):
     if report_type == "CTR Report":
         title_top = Inches(0.2)
         top_margin = Inches(1.0)
-        spacing_y = Inches(2.8)  # Augmenté de 2.5 à 2.8 pour le CTR Report
+        spacing_y = Inches(2.8)  # Espacement vertical pour CTR
         spacing_x = Inches(3) + Inches(2)  # Espacement horizontal pour CTR
     else:  # VCR Report
         title_top = Inches(0.5)
-        top_margin = Inches(1.8)
-        spacing_y = Inches(2.8)
-        spacing_x = Inches(3) + Inches(1)
+        top_margin = Inches(1.8)  # Augmenté pour plus d'espace après le titre
+        spacing_y = Inches(2.8)  # Espacement vertical ajusté pour VCR
+        spacing_x = Inches(3) + Inches(1)  # Espacement horizontal réduit pour VCR
     
     # Titre du rapport
     title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))
@@ -269,7 +269,7 @@ def send_report_to_slack(file_buffer, filename, user_login):
         return False, f"Error sending to Slack: {str(e)}"
 
 def main():
-    st.title("Creative Reporting Generator")
+       st.title("Creative Reporting Generator")
     st.markdown("---")
     
     # Sélection du type de rapport
@@ -282,12 +282,12 @@ def main():
     # Nouvelle section pour le nom du rapport
     report_name = st.text_input(
         "Creative Reporting Name",
-        placeholder="e.g. Google_Creative_Report_Q2_2025",
+        placeholder="e.g. Google_Creative_Report_Q1_2024",
         help="Choose a name for your report",
         key="report_name"
     )
     
-    final_report_name = report_name if report_name else "Creative_Reporting"
+    final_report_name = report_name if report_nameame else "Creative_Reporting"
     
     st.markdown("---")
     

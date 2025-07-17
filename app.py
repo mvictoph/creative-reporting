@@ -143,7 +143,7 @@ def create_ppt_from_data(df, images_dict, report_type):
     else:  # VCR Report
         title_top = Inches(0.5)  # Titre plus bas
         top_margin = Inches(1.5)  # Commencer les images plus bas
-        spacing_y = Inches(3.5)  # Espacement vertical augmenté pour VCR
+        spacing_y = Inches(2.5)  # Espacement vertical augmenté pour VCR
     
     # Titre du rapport
     title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))

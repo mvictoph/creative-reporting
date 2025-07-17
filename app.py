@@ -348,7 +348,7 @@ def main():
             
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
-                    with st.spinninner('Generating report...'):
+                    with st.spinner('Generating report...'):  # Correction ici
                         benchmark_value = benchmark if benchmark > 0 else None
                         pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                         st.success("Report generated successfully!")
@@ -370,7 +370,7 @@ def main():
                     
                     if user_login:
                         if st.button("📤 Generate and Send to Slack"):
-                            with st.spinner('Generating and sending to Slack...'):
+                            with st.spinner('Generating and sending to Slack...'):  # Correction ici
                                 benchmark_value = benchmark if benchmark > 0 else None
                                 pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                                 success, message = send_report_to_slack(

@@ -9,6 +9,9 @@ from PIL import Image
 import warnings
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+import cv2
+import tempfile
+import numpy as np
 
 # Ignorer les avertissements OpenPyXL
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
@@ -20,10 +23,62 @@ st.set_page_config(page_title="Amazon Creative Reporting", page_icon="📊", lay
 CTR_REQUIRED_COLUMNS = ['Variant', 'Click-throughs', 'Impressions']
 VCR_REQUIRED_COLUMNS = ['Variant', 'Video start', 'Video complete']
 
+# Initialisation du client Slack
+slack_token = os.environ.get('SLACK_TOKEN')
+if slack_token:
+    client = WebClient(token=slack_token)
+else:
+    st.warning("Slack token not found. Slack integration will not work.")
+    client = None
+
+def pixels_to_inches(pixels):
+    return Inches(pixels / 96)
+
+def resize_image(img, max_width, max_height):
+    width, height = img.size
+    aspect_ratio = width / height
+    if width > max_width or height > max_height:
+        if aspect_ratio > 1:
+            new_width = max_width
+            new_height = int(new_width / aspect_ratio)
+        else:
+            new_height = max_height
+            new_width = int(new_height * aspect_ratio)
+        return new_width, new_height
+    return width, height
+
 def validate_columns(df, report_type):
     required_columns = CTR_REQUIRED_COLUMNS if report_type == "CTR Report" else VCR_REQUIRED_COLUMNS
     missing_columns = [col for col in required_columns if col not in df.columns]
     return len(missing_columns) == 0, missing_columns
+
+def extract_frame_from_video(video_file, time_in_seconds=2):
+    # Créer un fichier temporaire pour la vidéo
+    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_file:
+        tmp_file.write(video_file.read())
+        video_path = tmp_file.name
+
+    try:
+        # Ouvrir la vidéo
+        cap = cv2.VideoCapture(video_path)
+        
+        # Aller à la frame souhaitée (2 secondes)
+        cap.set(cv2.CAP_PROP_POS_MSEC, time_in_seconds * 1000)
+        
+        # Lire la frame
+        success, frame = cap.read()
+        
+        if success:
+            # Convertir BGR en RGB
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Convertir en image PIL
+            image = Image.fromarray(frame_rgb)
+            return image
+        else:
+            return None
+    finally:
+        cap.release()
+        os.unlink(video_path)  # Supprimer le fichier temporaire
 
 def calculate_metrics(df, variant, report_type):
     variant_data = df[df['Variant'] == variant]
@@ -37,6 +92,42 @@ def calculate_metrics(df, variant, report_type):
         video_completes = variant_data['Video complete'].sum()
         vcr = video_completes / video_starts if video_starts > 0 else 0
         return video_starts, video_completes, vcr
+
+def apply_amazon_style(text_frame):
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            run.font.name = "Amazon Ember"
+            run.font.color.rgb = RGBColor(0, 0, 0)
+
+def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6):
+    def clean_string(s):
+        return ''.join(c.lower() for c in s if c.isalnum())
+    
+    clean_variant = clean_string(variant_name)
+    best_match = None
+    highest_similarity = 0
+    
+    for img_name in image_files:
+        clean_img_name = clean_string(os.path.splitext(img_name)[0])
+        
+        if clean_img_name in clean_variant or clean_variant in clean_img_name:
+            similarity = 0.8
+        else:
+            variant_words = set(clean_variant.split())
+            img_words = set(clean_img_name.split())
+            common_words = variant_words.intersection(img_words)
+            
+            if common_words:
+                similarity = len(common_words) / max(len(variant_words), len(img_words))
+            else:
+                common_chars = set(clean_img_name) & set(clean_variant)
+                similarity = len(common_chars) / len(set(clean_img_name + clean_variant))
+        
+        if similarity > highest_similarity:
+            highest_similarity = similarity
+            best_match = img_name
+    
+    return (best_match, highest_similarity) if highest_similarity >= similarity_threshold else (None, 0)
 
 def create_ppt_from_data(df, images_dict, report_type):
     prs = Presentation()
@@ -128,6 +219,30 @@ def create_ppt_from_data(df, images_dict, report_type):
     pptx_buffer.seek(0)
     return pptx_buffer
 
+def send_report_to_slack(file_buffer, filename, user_login):
+    if not client:
+        return False, "Slack client not initialized. Check your SLACK_TOKEN."
+    
+    try:
+        # Personnaliser le message avec le login de l'utilisateur
+        message = f"Here's the latest report from {user_login}!"
+
+        # Upload file directly to channel
+        response = client.files_upload_v2(
+            channel="C095U79QZDL",
+            file=file_buffer,
+            filename=filename,
+            initial_comment=message
+        )
+        
+        if response['ok']:
+            return True, f"Report successfully sent to Slack for {user_login}!"
+        else:
+            return False, f"Error in Slack response: {response}"
+            
+    except SlackApiError as e:
+        return False, f"Error sending to Slack: {str(e)}"
+
 def main():
     st.title("Creative Reporting Generator")
     st.markdown("---")
@@ -142,12 +257,11 @@ def main():
     # Nouvelle section pour le nom du rapport
     report_name = st.text_input(
         "Creative Reporting Name",
-           placeholder="e.g. Google_Creative_Report_Q1_2024",
-        help="Choose a name for your report (optional)",
+        placeholder="e.g. Google_Creative_Report_Q1_2024",
+        help="Choose a name for your report",
         key="report_name"
     )
     
-    # Si aucun nom n'est fourni, utiliser le nom par défaut
     final_report_name = report_name if report_name else "Creative_Reporting"
     
     st.markdown("---")
@@ -161,12 +275,37 @@ def main():
             st.success("✅ Excel file successfully loaded")
 
     with col2:
-        st.subheader("🖼️ Creative Images")
-        image_files = st.file_uploader("Upload your creative images", type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
-        if image_files:
-            st.success(f"✅ {len(image_files)} images loaded")
+        st.subheader("🖼️ Creative Files")
+        if report_type == "CTR Report":
+            allowed_types = ['jpg', 'jpeg', 'png']
+            help_text = "Upload your creative images"
+        else:  # VCR Report
+            allowed_types = ['mp4']
+            help_text = "Upload your video files"
+            
+        creative_files = st.file_uploader(
+            help_text,
+            type=allowed_types,
+            accept_multiple_files=True
+        )
+        
+        if creative_files:
+            try:
+                if report_type == "CTR Report":
+                    images_dict = {
+                        file.name: Image.open(file) 
+                        for file in creative_files
+                    }
+                else:  # VCR Report
+                    images_dict = {
+                        file.name.replace('.mp4', '.jpg'): extract_frame_from_video(file)
+                        for file in creative_files
+                    }
+                st.success(f"✅ {len(creative_files)} files loaded")
+            except Exception as e:
+                st.error(f"Error processing files: {str(e)}")
 
-    if excel_file and image_files:
+    if excel_file and creative_files:
         try:
             df = pd.read_excel(excel_file)
             
@@ -176,8 +315,6 @@ def main():
                 st.error(f"Missing required columns for {report_type}: {', '.join(missing_columns)}")
                 return
 
-            images_dict = {img_file.name: Image.open(img_file) for img_file in image_files}
-            
             st.write(f"Number of variants detected: {len(df['Variant'].unique())}")
             
             col1, col2 = st.columns(2)

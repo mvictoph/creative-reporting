@@ -130,7 +130,7 @@ def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6
     
     return (best_match, highest_similarity) if highest_similarity >= similarity_threshold else (None, 0)
 
-def create_ppt_from_data(df, images_dict, report_type):
+def create_ppt_pt_from_data(df, images_dict, report_type):
     prs = Presentation()
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
@@ -139,13 +139,13 @@ def create_ppt_from_data(df, images_dict, report_type):
     if report_type == "CTR Report":
         title_top = Inches(0.2)
         top_margin = Inches(1.0)
-        spacing_y = Inches(2.5)  # Espacement vertical pour CTR
+        spacing_y = Inches(2.8)  # Augmenté de 2.5 à 2.8 pour le CTR Report
         spacing_x = Inches(3) + Inches(2)  # Espacement horizontal pour CTR
     else:  # VCR Report
-        title_top = Inches(0.5)  # Titre plus bas
-        top_margin = Inches(1.8)  # Augmenté de 1.2 à 1.8 pour plus d'espace après le titre
-        spacing_y = Inches(2.8)  # Espacement vertical ajusté pour VCR
-        spacing_x = Inches(3) + Inches(1)  # Espacement horizontal réduit pour VCR
+        title_top = Inches(0.5)
+        top_margin = Inches(1.8)
+        spacing_y = Inches(2.8)
+        spacing_x = Inches(3) + Inches(1)
     
     # Titre du rapport
     title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))

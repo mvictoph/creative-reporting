@@ -54,45 +54,43 @@ def validate_columns(df, report_type):
     return len(missing_columns) == 0, missing_columns
 
 def extract_frame_from_video(video_file, time_in_seconds=3):
-    # Créer un fichier temporaire pour la vidéo
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_file:
         tmp_file.write(video_file.read())
         video_path = tmp_file.name
 
     try:
-        # Ouvrir la vidéo
         cap = cv2.VideoCapture(video_path)
-        
-        # Aller à la frame souhaitée (3 secondes)
         cap.set(cv2.CAP_PROP_POS_MSEC, time_in_seconds * 1000)
-        
-        # Lire la frame
         success, frame = cap.read()
         
         if success:
-            # Convertir BGR en RGB
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # Convertir en image PIL
             image = Image.fromarray(frame_rgb)
             return image
         else:
             return None
     finally:
         cap.release()
-        os.unlink(video_path)  # Supprimer le fichier temporaire
+        os.unlink(video_path)
 
-def calculate_metrics(df, variant, report_type):
+def calculate_metrics(df, variant, report_type, benchmark=None):
     variant_data = df[df['Variant'] == variant]
     if report_type == "CTR Report":
         total_clicks = variant_data['Click-throughs'].sum()
         total_impressions = variant_data['Impressions'].sum()
         rate = total_clicks / total_impressions if total_impressions > 0 else 0
-        return total_clicks, total_impressions, rate
     else:  # VCR Report
         video_starts = variant_data['Video start'].sum()
         video_completes = variant_data['Video complete'].sum()
-        vcr = video_completes / video_starts if video_starts > 0 else 0
-        return video_starts, video_completes, vcr
+        rate = video_completes / video_starts if video_starts > 0 else 0
+    
+    evolution = None
+    if benchmark is not None and benchmark != 0:
+        evolution = ((rate - benchmark/100) / (benchmark/100)) * 100
+
+    return total_clicks if report_type == "CTR Report" else video_starts, \
+           total_impressions if report_type == "CTR Report" else video_completes, \
+           rate, evolution
 
 def apply_amazon_style(text_frame):
     for paragraph in text_frame.paragraphs:
@@ -130,35 +128,26 @@ def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6
     
     return (best_match, highest_similarity) if highest_similarity >= similarity_threshold else (None, 0)
 
-def create_ppt_from_data(df, images_dict, report_type):
+def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
     prs = Presentation()
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
     
-    # Configuration adaptée selon le type de rapport
-    if report_type == "CTR Report":
-        title_top = Inches(0.2)
-        top_margin = Inches(1.0)
-        spacing_y = Inches(3)  # Espacement vertical pour CTR
-        spacing_x = Inches(3) + Inches(2)  # Espacement horizontal pour CTR
-    else:  # VCR Report
-        title_top = Inches(0.5)
-        top_margin = Inches(1.8)  # Augmenté pour plus d'espace après le titre
-        spacing_y = Inches(2.8)  # Espacement vertical ajusté pour VCR
-        spacing_x = Inches(3) + Inches(1)  # Espacement horizontal réduit pour VCR
+    title_top = Inches(0.2) if report_type == "CTR Report" else Inches(0.5)
+    top_margin = Inches(1.0) if report_type == "CTR Report" else Inches(1.8)
+    spacing_y = Inches(3) if report_type == "CTR Report" else Inches(2.8)
+    spacing_x = Inches(5) if report_type == "CTR Report" else Inches(4)
     
-    # Titre du rapport
     title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
     title_frame.text = "Creatives Static Performance Report" if report_type == "CTR Report" else "Creatives Video Performance Report"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
-    # Configuration de la grille
     items_per_row = 2
     left_margin = Inches(1)
-    max_image_width = Inches(3)  # ~220 pixels
-    max_image_height = Inches(2.5)  # ~180 pixels
+    max_image_width = Inches(3)
+    max_image_height = Inches(2.5)
     
     for index, variant in enumerate(df['Variant'].unique()):
         row_num = index // items_per_row
@@ -168,7 +157,6 @@ def create_ppt_from_data(df, images_dict, report_type):
         top = top_margin + (row_num * spacing_y)
         
         try:
-            # Ajout de l'image
             matched_image, similarity = find_best_matching_image(variant, images_dict.keys())
             if matched_image:
                 img = images_dict[matched_image]
@@ -181,7 +169,6 @@ def create_ppt_from_data(df, images_dict, report_type):
                 img_byte_arr.seek(0)
                 
                 if report_type == "VCR Report":
-                    # Bordure noire simple sans ombre
                     border = slide.shapes.add_shape(
                         MSO_SHAPE.RECTANGLE, 
                         left, 
@@ -190,16 +177,14 @@ def create_ppt_from_data(df, images_dict, report_type):
                         image_height
                     )
                     border.line.color.rgb = RGBColor(0, 0, 0)
-                    border.line.width = Pt(1.5)  # Épaisseur de la bordure
-                    border.fill.background()  # Rend le rectangle transparent
-                    border.shadow.inherit = False  # Désactive l'ombre
+                    border.line.width = Pt(1.5)
+                    border.fill.background()
+                    border.shadow.inherit = False
                 
                 slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
             
-            # Ajout des informations textuelles
             text_top = top + image_height + Inches(0.1)
             
-            # Texte Creative
             name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
             name_frame = name_box.text_frame
             p = name_frame.paragraphs[0]
@@ -208,8 +193,7 @@ def create_ppt_from_data(df, images_dict, report_type):
             p.font.bold = True
             apply_amazon_style(name_frame)
             
-            # Métriques adaptées selon le type de rapport
-            val1, val2, rate = calculate_metrics(df, variant, report_type)
+            val1, val2, rate, evolution = calculate_metrics(df, variant, report_type, benchmark)
             metrics_box = slide.shapes.add_textbox(left, text_top + Inches(0.25), image_width, Inches(0.6))
             metrics_frame = metrics_box.text_frame
             
@@ -234,6 +218,13 @@ def create_ppt_from_data(df, images_dict, report_type):
                 p.text = metric
                 p.font.size = Pt(9)
             
+            if evolution is not None:
+                p = metrics_frame.add_paragraph()
+                evolution_text = f"{'+' if evolution >= 0 else ''}{evolution:.1f}% vs benchmark"
+                p.text = evolution_text
+                p.font.size = Pt(9)
+                p.font.color.rgb = RGBColor(0, 128, 0) if evolution >= 0 else RGBColor(255, 0, 0)
+            
             apply_amazon_style(metrics_frame)
             
         except Exception as e:
@@ -249,10 +240,7 @@ def send_report_to_slack(file_buffer, filename, user_login):
         return False, "Slack client not initialized. Check your SLACK_TOKEN."
     
     try:
-        # Personnaliser le message avec le login de l'utilisateur
         message = f"Here's the latest report from {user_login}!"
-
-        # Upload file directly to channel
         response = client.files_upload_v2(
             channel="C095U79QZDL",
             file=file_buffer,
@@ -272,16 +260,23 @@ def main():
     st.title("Creative Reporting Generator")
     st.markdown("---")
     
-    # Sélection du type de rapport
     report_type = st.radio(
         "Select Report Type:",
         ("CTR Report", "VCR Report"),
         help="Choose CTR for static creatives or VCR for video creatives"
     )
 
-    # Nouvelle section pour le nom du rapport
+    benchmark = st.number_input(
+        "Benchmark (optional)",
+        min_value=0.0,
+        max_value=100.0,
+        value=None,
+        format="%.2f",
+        help="Enter the benchmark percentage for comparison"
+    )
+
     report_name = st.text_input(
-        "Creative Reporting Name",
+        "Creative Re Reporting Name",
         placeholder="e.g. Google_Creative_Report_Q1_2024",
         help="Choose a name for your report",
         key="report_name"
@@ -296,19 +291,15 @@ def main():
     with col1:
         st.subheader("📊 Excel File")
         excel_file = st.file_uploader("Upload your Excel file", type=['xlsx'])
-        if excel_file:  # Corrigé de "if ef excel_file"
+        if excel_file:
             st.success("✅ Excel file successfully loaded")
 
     with col2:
         st.subheader("🖼️ Creative Files")
-        if report_type == "CTR Report":
-            allowed_types = ['jpg', 'jpeg', 'png']
-            help_text = "Upload your creative images"
-        else:  # VCR Report
-            allowed_types = ['mp4']
-            help_text = "Upload your video files"
+        allowed_types = ['jpg', 'jpeg', 'png'] if report_type == "CTR Report" else ['mp4']
+        help_text = "Upload your creative images" if report_type == "CTR Report" else "Upload your video files"
             
-        creative_files = st.file_uploader(
+        crecreative_files = st.file_uploader(
             help_text,
             type=allowed_types,
             accept_multiple_files=True
@@ -334,7 +325,6 @@ def main():
         try:
             df = pd.read_excel(excel_file)
             
-            # Valider les colonnes
             columns_valid, missing_columns = validate_columns(df, report_type)
             if not columns_valid:
                 st.error(f"Missing required columns for {report_type}: {', '.join(missing_columns)}")
@@ -347,7 +337,7 @@ def main():
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
                     with st.spinner('Generating report...'):
-                        pptx_buffer = create_ppt_from_data(df, images_dict, report_type)
+                        pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark)
                         st.success("Report generated successfully!")
                         
                         st.download_button(
@@ -368,7 +358,7 @@ def main():
                     if user_login:
                         if st.button("📤 Generate and Send to Slack"):
                             with st.spinner('Generating and sending to Slack...'):
-                                pptx_buffer = create_ppt_from_data(df, images_dict, report_type)
+                                pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark)
                                 success, message = send_report_to_slack(
                                     pptx_buffer,
                                     f"{final_report_name}.pptx",

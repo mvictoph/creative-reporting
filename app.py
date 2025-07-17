@@ -334,7 +334,7 @@ def main():
 
     if excel_file and creative_files:
         try:
-            df = pd.read_excel(excel_file)le)
+            df = pd.read_excel(excel_file)
             
             columns_valid, missing_columns = validate_columns(df, report_type)
             if not columns_valid:

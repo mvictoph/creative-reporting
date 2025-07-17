@@ -296,7 +296,7 @@ def main():
     with col1:
         st.subheader("📊 Excel File")
         excel_file = st.file_uploader("Upload your Excel file", type=['xlsx'])
-        if ef excel_file:
+        if excel_file:  # Corrigé de "if ef excel_file"
             st.success("✅ Excel file successfully loaded")
 
     with col2:

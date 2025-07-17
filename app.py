@@ -269,7 +269,7 @@ def send_report_to_slack(file_buffer, filename, user_login):
         return False, f"Error sending to Slack: {str(e)}"
 
 def main():
-       st.title("Creative Reporting Generator")
+    st.title("Creative Reporting Generator")
     st.markdown("---")
     
     # Sélection du type de rapport
@@ -281,13 +281,13 @@ def main():
 
     # Nouvelle section pour le nom du rapport
     report_name = st.text_input(
-        "Creative Reporting Name",
+        "Creative Re Reporting Name",
         placeholder="e.g. Google_Creative_Report_Q1_2024",
         help="Choose a name for your report",
         key="report_name"
     )
     
-    final_report_name = report_name if report_nameame else "Creative_Reporting"
+    final_report_name = report_name if report_name else "Creative_Reporting"
     
     st.markdown("---")
     
@@ -296,7 +296,7 @@ def main():
     with col1:
         st.subheader("📊 Excel File")
         excel_file = st.file_uploader("Upload your Excel file", type=['xlsx'])
-        if excel_file:
+        if ef excel_file:
             st.success("✅ Excel file successfully loaded")
 
     with col2:

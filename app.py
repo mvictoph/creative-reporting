@@ -143,7 +143,7 @@ def create_ppt_from_data(df, images_dict, report_type):
         spacing_x = Inches(3) + Inches(2)  # Espacement horizontal pour CTR
     else:  # VCR Report
         title_top = Inches(0.5)  # Titre plus bas
-        top_margin = Inches(1.2)  # Images du haut un peu plus près du titre
+        top_margin = Inches(1.8)  # Augmenté de 1.2 à 1.8 pour plus d'espace après le titre
         spacing_y = Inches(2.8)  # Espacement vertical ajusté pour VCR
         spacing_x = Inches(3) + Inches(1)  # Espacement horizontal réduit pour VCR
     

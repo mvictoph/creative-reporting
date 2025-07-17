@@ -3,6 +3,7 @@ import pandas as pd
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
 import os
 import io
 from PIL import Image
@@ -134,25 +135,34 @@ def create_ppt_from_data(df, images_dict, report_type):
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
     
-    # Titre adapté selon le type de rapport
-    title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
+    # Configuration adaptée selon le type de rapport
+    if report_type == "CTR Report":
+        title_top = Inches(0.2)
+        top_margin = Inches(1.0)
+        spacing_y = Inches(2.5)  # Espacement vertical pour CTR
+    else:  # VCR Report
+        title_top = Inches(0.5)  # Titre plus bas
+        top_margin = Inches(1.5)  # Commencer les images plus bas
+        spacing_y = Inches(2.2)  # Espacement vertical réduit pour VCR
+    
+    # Titre du rapport
+    title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
-    title_frame.text = f"{'Creative Performance Report' if report_type == 'CTR Report' else 'Video Performance Report'}"
+    title_frame.text = "Creatives Static Performance Report" if report_type == "CTR Report" else "Creatives Video Performance Report"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
     # Configuration de la grille
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(1.0)
-    max_image_width = pixels_to_inches(220)
-    max_image_height = pixels_to_inches(180)
+    max_image_width = Inches(3)  # ~220 pixels
+    max_image_height = Inches(2.5)  # ~180 pixels
     spacing_x = max_image_width + Inches(2)
-    spacing_y = max_image_height + Inches(1.3)
     
     for index, variant in enumerate(df['Variant'].unique()):
         row_num = index // items_per_row
         col_num = index % items_per_row
+        
         left = left_margin + (col_num * spacing_x)
         top = top_margin + (row_num * spacing_y)
         
@@ -168,6 +178,19 @@ def create_ppt_from_data(df, images_dict, report_type):
                 img_byte_arr = io.BytesIO()
                 img.save(img_byte_arr, format=img.format if img.format else 'JPEG')
                 img_byte_arr.seek(0)
+                
+                if report_type == "VCR Report":
+                    # Ajouter une bordure noire pour les images VCR
+                    border = slide.shapes.add_shape(
+                        MSO_SHAPE.RECTANGLE, 
+                        left, 
+                        top, 
+                        image_width, 
+                        image_height
+                    )
+                    border.line.color.rgb = RGBColor(0, 0, 0)
+                    border.line.width = Pt(2)
+                    border.fill.background()
                 
                 slide.shapes.add_picture(img_byte_arr, left, top, width=image_width, height=image_height)
             

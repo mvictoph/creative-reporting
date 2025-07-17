@@ -221,21 +221,24 @@ def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
             rate_text = f"{'CTR' if report_type == 'CTR Report' else 'VCR'}: {rate:.2%}"
             if evolution is not None:
                 # Ajoute d'abord le taux (CTR ou VCR)
-                p.text = rate_text
-                
+                run_rate = p.add_run()
+                run_rate.text = rate_text
+                run_rate.font.size = Pt(9)
+
                 # Ajoute le pourcentage d'évolution en couleur
                 run_evolution = p.add_run()
                 run_evolution.text = f" ({'+' if evolution >= 0 else ''}{evolution:.1f}%"
                 run_evolution.font.size = Pt(9)
                 run_evolution.font.color.rgb = RGBColor(0, 128, 0) if evolution >= 0 else RGBColor(255, 0, 0)
-                
+
                 # Ajoute "vs benchmark" en couleur par défaut
                 run_benchmark = p.add_run()
                 run_benchmark.text = " vs benchmark)"
                 run_benchmark.font.size = Pt(9)
             else:
-                p.text = rate_text
-            p.font.size = Pt(9)
+                run_rate = p.add_run()
+                run_rate.text = rate_text
+                run_rate.font.size = Pt(9)
             
             apply_amazon_style(metrics_frame)
             

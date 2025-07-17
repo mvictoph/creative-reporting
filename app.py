@@ -16,89 +16,44 @@ warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 # Configuration de la page
 st.set_page_config(page_title="Amazon Creative Reporting", page_icon="📊", layout="wide")
 
-# Initialisation du client Slack
-slack_token = os.environ.get('SLACK_TOKEN')
-if slack_token:
-    client = WebClient(token=slack_token)
-else:
-    st.warning("Slack token not found. Slack integration will not work.")
-    client = None
+# Définir les colonnes requises pour chaque type de rapport
+CTR_REQUIRED_COLUMNS = ['Variant', 'Click-throughs', 'Impressions']
+VCR_REQUIRED_COLUMNS = ['Variant', 'Video start', 'Video complete']
 
-def pixels_to_inches(pixels):
-    return Inches(pixels / 96)
+def validate_columns(df, report_type):
+    required_columns = CTR_REQUIRED_COLUMNS if report_type == "CTR Report" else VCR_REQUIRED_COLUMNS
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    return len(missing_columns) == 0, missing_columns
 
-def resize_image(img, max_width, max_height):
-    width, height = img.size
-    aspect_ratio = width / height
-    if width > max_width or height > max_height:
-        if aspect_ratio > 1:
-            new_width = max_width
-            new_height = int(new_width / aspect_ratio)
-        else:
-            new_height = max_height
-            new_width = int(new_height * aspect_ratio)
-        return new_width, new_height
-    return width, height
-
-def calculate_metrics(df, variant):
+def calculate_metrics(df, variant, report_type):
     variant_data = df[df['Variant'] == variant]
-    total_clicks = variant_data['Click-throughs'].sum()
-    total_impressions = variant_data['Impressions'].sum()
-    ctr = total_clicks / total_impressions if total_impressions > 0 else 0
-    return total_clicks, total_impressions, ctr
+    if report_type == "CTR Report":
+        total_clicks = variant_data['Click-throughs'].sum()
+        total_impressions = variant_data['Impressions'].sum()
+        rate = total_clicks / total_impressions if total_impressions > 0 else 0
+        return total_clicks, total_impressions, rate
+    else:  # VCR Report
+        video_starts = variant_data['Video start'].sum()
+        video_completes = variant_data['Video complete'].sum()
+        vcr = video_completes / video_starts if video_starts > 0 else 0
+        return video_starts, video_completes, vcr
 
-def apply_amazon_style(text_frame):
-    for paragraph in text_frame.paragraphs:
-        for run in paragraph.runs:
-            run.font.name = "Amazon Ember"
-            run.font.color.rgb = RGBColor(0, 0, 0)
-
-def find_best_matching_image(variant_name, image_files, similarity_threshold=0.6):
-    def clean_string(s):
-        return ''.join(c.lower() for c in s if c.isalnum())
-    
-    clean_variant = clean_string(variant_name)
-    best_match = None
-    highest_similarity = 0
-    
-    for img_name in image_files:
-        clean_img_name = clean_string(os.path.splitext(img_name)[0])
-        
-        if clean_img_name in clean_variant or clean_variant in clean_img_name:
-            similarity = 0.8
-        else:
-            variant_words = set(clean_variant.split())
-            img_words = set(clean_img_name.split())
-            common_words = variant_words.intersection(img_words)
-            
-            if common_words:
-                similarity = len(common_words) / max(len(variant_words), len(img_words))
-            else:
-                common_chars = set(clean_img_name) & set(clean_variant)
-                similarity = len(common_chars) / len(set(clean_img_name + clean_variant))
-        
-        if similarity > highest_similarity:
-            highest_similarity = similarity
-            best_match = img_name
-    
-    return (best_match, highest_similarity) if highest_similarity >= similarity_threshold else (None, 0)
-
-def create_ppt_from_data(df, images_dict):
+def create_ppt_from_data(df, images_dict, report_type):
     prs = Presentation()
     blank_slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_slide_layout)
     
-    # Titre - Position ajustée
+    # Titre adapté selon le type de rapport
     title_box = slide.shapes.add_textbox(Inches(1), Inches(0.2), Inches(8), Inches(0.5))
     title_frame = title_box.text_frame
-    title_frame.text = "Creative Reporting"
+    title_frame.text = f"{'Creative Performance Report' if report_type == 'CTR Report' else 'Video Performance Report'}"
     title_frame.paragraphs[0].font.size = Pt(24)
     apply_amazon_style(title_frame)
     
     # Configuration de la grille
     items_per_row = 2
     left_margin = Inches(1)
-    top_margin = Inches(1.0)  # Augmenté pour plus d'espace sous le titre
+    top_margin = Inches(1.0)
     max_image_width = pixels_to_inches(220)
     max_image_height = pixels_to_inches(180)
     spacing_x = max_image_width + Inches(2)
@@ -128,7 +83,7 @@ def create_ppt_from_data(df, images_dict):
             # Ajout des informations textuelles
             text_top = top + image_height + Inches(0.1)
             
-            # Texte Creative simplifié
+            # Texte Creative
             name_box = slide.shapes.add_textbox(left, text_top, image_width, Inches(0.2))
             name_frame = name_box.text_frame
             p = name_frame.paragraphs[0]
@@ -137,16 +92,23 @@ def create_ppt_from_data(df, images_dict):
             p.font.bold = True
             apply_amazon_style(name_frame)
             
-            # Métriques
-            total_clicks, total_impressions, ctr = calculate_metrics(df, variant)
+            # Métriques adaptées selon le type de rapport
+            val1, val2, rate = calculate_metrics(df, variant, report_type)
             metrics_box = slide.shapes.add_textbox(left, text_top + Inches(0.25), image_width, Inches(0.6))
             metrics_frame = metrics_box.text_frame
             
-            metrics = [
-                f"Click-throughs: {total_clicks:,}",
-                f"Impressions: {total_impressions:,}",
-                f"CTR: {ctr:.2%}"
-            ]
+            if report_type == "CTR Report":
+                metrics = [
+                    f"Click-throughs: {val1:,}",
+                    f"Impressions: {val2:,}",
+                    f"CTR: {rate:.2%}"
+                ]
+            else:
+                metrics = [
+                    f"Video starts: {val1:,}",
+                    f"Video completes: {val2:,}",
+                    f"VCR: {rate:.2%}"
+                ]
             
             for idx, metric in enumerate(metrics):
                 if idx == 0:
@@ -166,38 +128,21 @@ def create_ppt_from_data(df, images_dict):
     pptx_buffer.seek(0)
     return pptx_buffer
 
-def send_report_to_slack(file_buffer, filename, user_login):
-    if not client:
-        return False, "Slack client not initialized. Check your SLACK_TOKEN."
-    
-    try:
-        # Personnaliser le message avec le login de l'utilisateur
-        message = f"Here's the latest report from {user_login}!"
-
-        # Upload file directly to channel
-        response = client.files_upload_v2(
-            channel="C095U79QZDL",
-            file=file_buffer,
-            filename=filename,
-            initial_comment=message
-        )
-        
-        if response['ok']:
-            return True, f"Report successfully sent to Slack for {user_login}!"
-        else:
-            return False, f"Error in Slack response: {response}"
-            
-    except SlackApiError as e:
-        return False, f"Error sending to Slack: {str(e)}"
-
 def main():
     st.title("Creative Reporting Generator")
     st.markdown("---")
     
+    # Sélection du type de rapport
+    report_type = st.radio(
+        "Select Report Type:",
+        ("CTR Report", "VCR Report"),
+        help="Choose CTR for static creatives or VCR for video creatives"
+    )
+
     # Nouvelle section pour le nom du rapport
     report_name = st.text_input(
         "Creative Reporting Name",
-        placeholder="e.g., Creative_Reporting_Q1_2024",
+           placeholder="e.g. Google_Creative_Report_Q1_2024",
         help="Choose a name for your report (optional)",
         key="report_name"
     )
@@ -211,19 +156,26 @@ def main():
     
     with col1:
         st.subheader("📊 Excel File")
-        excel_file = st.file_uploader("Choose your Excel file", type=['xlsx'])
+        excel_file = st.file_uploader("Upload your Excel file", type=['xlsx'])
         if excel_file:
             st.success("✅ Excel file successfully loaded")
 
     with col2:
         st.subheader("🖼️ Creative Images")
-        image_files = st.file_uploader("Choose your images", type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
+        image_files = st.file_uploader("Upload your creative images", type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
         if image_files:
             st.success(f"✅ {len(image_files)} images loaded")
 
     if excel_file and image_files:
         try:
             df = pd.read_excel(excel_file)
+            
+            # Valider les colonnes
+            columns_valid, missing_columns = validate_columns(df, report_type)
+            if not columns_valid:
+                st.error(f"Missing required columns for {report_type}: {', '.join(missing_columns)}")
+                return
+
             images_dict = {img_file.name: Image.open(img_file) for img_file in image_files}
             
             st.write(f"Number of variants detected: {len(df['Variant'].unique())}")
@@ -233,7 +185,7 @@ def main():
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
                     with st.spinner('Generating report...'):
-                        pptx_buffer = create_ppt_from_data(df, images_dict)
+                        pptx_buffer = create_ppt_from_data(df, images_dict, report_type)
                         st.success("Report generated successfully!")
                         
                         st.download_button(
@@ -247,17 +199,17 @@ def main():
                 with st.expander("📤 Send to Slack (Optional)"):
                     user_login = st.text_input(
                         "Enter your Amazon login to send via Slack",
-                        placeholder="e.g., jsmith",
+                        placeholder="e.g. jsmith",
                         help="Optional: Enter your login to send the report to Slack"
                     )
                     
                     if user_login:
                         if st.button("📤 Generate and Send to Slack"):
                             with st.spinner('Generating and sending to Slack...'):
-                                pptx_buffer = create_ppt_from_data(df, images_dict)
+                                pptx_buffer = create_ppt_from_data(df, images_dict, report_type)
                                 success, message = send_report_to_slack(
                                     pptx_buffer,
-                                    f"{final_report_name}.pptx",  # Suppression de _{user_login}
+                                    f"{final_report_name}.pptx",
                                     user_login
                                 )
                                 

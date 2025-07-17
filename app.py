@@ -287,7 +287,7 @@ def main():
         max_value=100.0,
         value=0.0,
         format="%.2f",
-        help="Enter the benchmark percentage for comparison (0 to disable)"
+        help="Enter the benchmark percentage as a number (e.g. enter 0.12 for 0.12%, do not include the % symbol)"
     )
 
     report_name = st.text_input(
@@ -351,7 +351,7 @@ def main():
             
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
-                    with st.spinner('Generating report...'):  # Correction ici
+                    with st.spinner('Generating report...'):
                         benchmark_value = benchmark if benchmark > 0 else None
                         pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                         st.success("Report generated successfully!")
@@ -373,7 +373,7 @@ def main():
                     
                     if user_login:
                         if st.button("📤 Generate and Send to Slack"):
-                            with st.spinner('Generating and sending to Slack...'):  # Correction ici
+                            with st.spinner('Generating and sending to Slack...'):
                                 benchmark_value = benchmark if benchmark > 0 else None
                                 pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                                 success, message = send_report_to_slack(

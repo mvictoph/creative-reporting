@@ -200,14 +200,12 @@ def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
             if report_type == "CTR Report":
                 metrics = [
                     f"Click-throughs: {val1:,}",
-                    f"Impressions: {val2:,}",
-                    f"CTR: {rate:.2%}"
+                    f"Impressions: {val2:,}"
                 ]
             else:
                 metrics = [
                     f"Video starts: {val1:,}",
-                    f"Video completes: {val2:,}",
-                    f"VCR: {rate:.2%}"
+                    f"Video completes: {val2:,}"
                 ]
             
             for idx, metric in enumerate(metrics):
@@ -218,12 +216,25 @@ def create_ppt_from_data(df, images_dict, report_type, benchmark=None):
                 p.text = metric
                 p.font.size = Pt(9)
             
+            # Ajout du CTR/VCR avec benchmark sur la même ligne
+            p = metrics_frame.add_paragraph()
+            rate_text = f"{'CTR' if report_type == 'CTR Report' else 'VCR'}: {rate:.2%}"
             if evolution is not None:
-                p = metrics_frame.add_paragraph()
-                evolution_text = f"{'+' if evolution >= 0 else ''}{evolution:.1f}% vs benchmark"
-                p.text = evolution_text
-                p.font.size = Pt(9)
-                p.font.color.rgb = RGBColor(0, 128, 0) if evolution >= 0 else RGBColor(255, 0, 0)
+                # Ajoute d'abord le taux (CTR ou VCR)
+                p.text = rate_text
+                
+                # Ajoute le pourcentage d'évolution en couleur
+                evolution_number = f" ({'+' if evolution >= 0 else ''}{evolution:.1f}%"
+                run_evolution = p.add_run(evolution_number)
+                run_evolution.font.size = Pt(9)
+                run_evolution.font.color.rgb = RGBColor(0, 128, 0) if evolution >= 0 else RGBColor(255, 0, 0)
+                
+                # Ajoute "vs benchmark" en couleur par défaut
+                run_benchmark = p.add_run(" vs benchmark)")
+                run_benchmark.font.size = Pt(9)
+            else:
+                p.text = rate_text
+            p.font.size = Pt(9)
             
             apply_amazon_style(metrics_frame)
             
@@ -266,12 +277,11 @@ def main():
         help="Choose CTR for static creatives or VCR for video creatives"
     )
 
-    # Modification ici pour le benchmark
     benchmark = st.number_input(
         "Benchmark (optional)",
         min_value=0.0,
         max_value=100.0,
-        value=0.0,  # Changed from None to 0.0
+        value=0.0,
         format="%.2f",
         help="Enter the benchmark percentage for comparison (0 to disable)"
     )
@@ -324,7 +334,7 @@ def main():
 
     if excel_file and creative_files:
         try:
-            df = pd.read_excel(excel_file)
+            df = pd.read_excel(excel_file)le)
             
             columns_valid, missing_columns = validate_columns(df, report_type)
             if not columns_valid:
@@ -338,7 +348,6 @@ def main():
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
                     with st.spinner('Generating report...'):
-                        # Pass benchmark only if it's not 0
                         benchmark_value = benchmark if benchmark > 0 else None
                         pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                         st.success("Report generated successfully!")
@@ -361,7 +370,6 @@ def main():
                     if user_login:
                         if st.button("📤 Generate and Send to Slack"):
                             with st.spinner('Generating and sending to Slack...'):
-                                # Pass benchmark only if it's not 0
                                 benchmark_value = benchmark if benchmark > 0 else None
                                 pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                                 success, message = send_report_to_slack(

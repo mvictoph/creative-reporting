@@ -53,7 +53,7 @@ def validate_columns(df, report_type):
     missing_columns = [col for col in required_columns if col not in df.columns]
     return len(missing_columns) == 0, missing_columns
 
-def extract_frame_from_video(video_file, time_in_seconds=2):
+def extract_frame_from_video(video_file, time_in_seconds=3):
     # Créer un fichier temporaire pour la vidéo
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_file:
         tmp_file.write(video_file.read())

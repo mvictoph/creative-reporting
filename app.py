@@ -266,17 +266,18 @@ def main():
         help="Choose CTR for static creatives or VCR for video creatives"
     )
 
+    # Modification ici pour le benchmark
     benchmark = st.number_input(
         "Benchmark (optional)",
         min_value=0.0,
         max_value=100.0,
-        value=None,
+        value=0.0,  # Changed from None to 0.0
         format="%.2f",
-        help="Enter the benchmark percentage for comparison"
+        help="Enter the benchmark percentage for comparison (0 to disable)"
     )
 
     report_name = st.text_input(
-        "Creative Re Reporting Name",
+        "Creative Reporting Name",
         placeholder="e.g. Google_Creative_Report_Q1_2024",
         help="Choose a name for your report",
         key="report_name"
@@ -299,7 +300,7 @@ def main():
         allowed_types = ['jpg', 'jpeg', 'png'] if report_type == "CTR Report" else ['mp4']
         help_text = "Upload your creative images" if report_type == "CTR Report" else "Upload your video files"
             
-        crecreative_files = st.file_uploader(
+        creative_files = st.file_uploader(
             help_text,
             type=allowed_types,
             accept_multiple_files=True
@@ -337,7 +338,9 @@ def main():
             with col1:
                 if st.button("🚀 Generate PowerPoint Report"):
                     with st.spinner('Generating report...'):
-                        pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark)
+                        # Pass benchmark only if it's not 0
+                        benchmark_value = benchmark if benchmark > 0 else None
+                        pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                         st.success("Report generated successfully!")
                         
                         st.download_button(
@@ -358,7 +361,9 @@ def main():
                     if user_login:
                         if st.button("📤 Generate and Send to Slack"):
                             with st.spinner('Generating and sending to Slack...'):
-                                pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark)
+                                # Pass benchmark only if it's not 0
+                                benchmark_value = benchmark if benchmark > 0 else None
+                                pptx_buffer = create_ppt_from_data(df, images_dict, report_type, benchmark_value)
                                 success, message = send_report_to_slack(
                                     pptx_buffer,
                                     f"{final_report_name}.pptx",

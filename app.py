@@ -140,10 +140,12 @@ def create_ppt_from_data(df, images_dict, report_type):
         title_top = Inches(0.2)
         top_margin = Inches(1.0)
         spacing_y = Inches(2.5)  # Espacement vertical pour CTR
+        spacing_x = Inches(3) + Inches(2)  # Espacement horizontal pour CTR
     else:  # VCR Report
         title_top = Inches(0.5)  # Titre plus bas
-        top_margin = Inches(1.5)  # Commencer les images plus bas
-        spacing_y = Inches(2.5)  # Espacement vertical augmenté pour VCR
+        top_margin = Inches(1.2)  # Images du haut un peu plus près du titre
+        spacing_y = Inches(2.8)  # Espacement vertical ajusté pour VCR
+        spacing_x = Inches(3) + Inches(1)  # Espacement horizontal réduit pour VCR
     
     # Titre du rapport
     title_box = slide.shapes.add_textbox(Inches(1), title_top, Inches(8), Inches(0.5))
@@ -157,7 +159,6 @@ def create_ppt_from_data(df, images_dict, report_type):
     left_margin = Inches(1)
     max_image_width = Inches(3)  # ~220 pixels
     max_image_height = Inches(2.5)  # ~180 pixels
-    spacing_x = max_image_width + Inches(2)
     
     for index, variant in enumerate(df['Variant'].unique()):
         row_num = index // items_per_row

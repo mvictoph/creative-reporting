@@ -5,5 +5,5 @@ Pillow
 openpyxl
 slack_sdk
 python-dotenv
-opencv-python
+opencv-python-headless
 numpy
